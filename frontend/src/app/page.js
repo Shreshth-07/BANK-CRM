@@ -952,9 +952,9 @@ export default function Dashboard() {
                   {/* Vertical Flow Diagram of Cards */}
                   <div className="relative z-10 w-full max-w-lg space-y-4">
                     {SIMULATOR_DATA[simScenario].steps.map((step, idx) => {
-                      const isActive = simStep === idx;
+                      const isActive = simStep === idx && (idx < 5 || simIsRunning);
                       const isSelected = simSelectedNode === idx;
-                      const isProcessed = idx < simStep;
+                      const isProcessed = idx < simStep || (simStep === 5 && !simIsRunning && idx === 5);
                       
                       return (
                         <React.Fragment key={idx}>
