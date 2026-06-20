@@ -117,3 +117,63 @@ stateDiagram-v2
     
     RMSummary --> [*] : Return campaign dossier
 ```
+
+## 3. Scoring Formulas & Heuristics
+
+The system implements rule-based models for evaluation metrics, ensuring explainability.
+
+### A. Customer Value Score (0 - 100)
+The value score represents the customer's asset value to the bank:
+$$\text{value\_score} = 0.40 \cdot \text{Income Score} + 0.35 \cdot \text{Balance Score} + 0.25 \cdot \text{Relationship Score}$$
+
+Where:
+* **Income Score** (40% Weight): Maxes out at an annual income of \$250,000.
+  $$\text{Income Score} = \min\left(\frac{\text{Annual Income}}{250000}, 1.0\right) \cdot 100$$
+* **Balance Score** (35% Weight): Maxes out at an average balance of \$100,000.
+  $$\text{Balance Score} = \min\left(\frac{\text{Average Monthly Balance}}{100000}, 1.0\right) \cdot 100$$
+* **Relationship Score** (25% Weight): Maxes out at 10 years of banking relationship.
+  $$\text{Relationship Score} = \min\left(\frac{\text{Relationship Years}}{10}, 1.0\right) \cdot 100$$
+
+---
+
+### B. Conversion Probability (5% - 95%)
+The conversion probability is initialized at a base of **40.0%** and adjusted using financial triggers:
+1. **Salary Credit Regularity**: $+15\%$ if salary is deposited regularly monthly.
+2. **Balance Tier**:
+   - $+20\%$ if average monthly balance is $\ge \$25,000$.
+   - $-20\%$ if average monthly balance is $< \$5,000$.
+3. **Previous Inquiries**: $+25\%$ if historical CRM notes contain keywords matching the campaign product.
+4. **Engagement Frequency**: $+10\%$ if customer registers $\ge 3$ interactions in the last 6 months.
+5. **Debt Burden (DTI)**: $-20\%$ if monthly EMI liabilities represent $> 30\%$ of monthly gross income.
+6. **Dormancy**: $-30\%$ if customer has 0 active interactions in the last 6 months.
+
+The final score is bound between a minimum of **5%** and a maximum of **95%**.
+
+---
+
+## 4. Explainability & State Output
+
+Every decision is traceable. For example, the `Conversion Prediction Agent` outputs:
+
+```json
+{
+  "customer_id": "102",
+  "conversion_probability": 88.0,
+  "reasons": [
+    "Salary credited regularly (+15%)",
+    "High balance maintained ($18,450) (+20%)",
+    "Previous CRM inquiries related to target product (loan) detected (+25%)",
+    "Customer conversion probability is estimated at 88% because of steady salary inflows and active inquiries."
+  ]
+}
+```
+
+---
+
+## 5. Architectural Trade-offs: ChromaDB vs relational SQL
+Reviewers may ask why the system uses ChromaDB instead of querying SQL directly:
+- **Relational SQL Database** (SQLite/PostgreSQL) is used for structured transaction ledgers and customer demographic fields.
+- **ChromaDB Vector Store** is used for:
+  1. **Unstructured CRM Notes**: Free-text conversation logs that require semantic search (e.g. finding customers expressing "interest in buying a home" without exact string matching).
+  2. **Product Catalog & Policies**: Unstructured policy PDF sheets used to confirm underwriting conditions through vector similarity matches.
+
