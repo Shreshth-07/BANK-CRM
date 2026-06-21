@@ -68,3 +68,7 @@ frontend/.env
 *.njsproj
 *.sln
 *.sw?
+
+# Word submission documents
+Submission_Report.docx
+
